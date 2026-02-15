@@ -20,55 +20,31 @@ public class DuckDBService {
             Log.d(TAG, "DuckDB connection established to: " + dbPath);
 
             try (Statement stmt = conn.createStatement()) {
-                // Core extensions
-                installAndLoad(stmt, "spatial");
-                installAndLoad(stmt, "httpfs");
-                installAndLoad(stmt, "http_client");
-                installAndLoad(stmt, "cron");
+                // Install and Load Extensions
+                // Note: On Android, downloading extensions requires network and valid architecture config.
+                // Assuming the bundled DuckDB version or online capability supports these.
+                
+                String[] extensions = {"spatial", "httpfs", "http_client", "cron", "zipfs"}; // Added zipfs
+                
+                for (String ext : extensions) {
+                    try {
+                        stmt.execute("INSTALL " + ext + ";");
+                        stmt.execute("LOAD " + ext + ";");
+                        Log.d(TAG, "Loaded extension: " + ext);
+                    } catch (SQLException e) {
+                        Log.w(TAG, "Could not load extension " + ext + ": " + e.getMessage());
+                    }
+                }
 
-                // Community / Query.Farm extensions for Real-Time & Event-Driven Data
-                // Note: These may require internet access to download and specific architecture support (e.g., android-aarch64)
+                // Attach in-memory database if strictly needed, though usually main is enough
+                // stmt.execute("ATTACH ':memory:' AS mem");
                 
-                // Allow unsigned extensions (often needed for community extensions)
-                stmt.execute("SET allow_unsigned_extensions = true;");
-
-                // Configure Query.Farm repository
-                // stmt.execute("SET custom_extension_repository = 'http://duckdb.query.farm';");
-
-                // Real-time streaming (Kafka)
-                installAndLoad(stmt, "tributary");
+                // Set S3 configuration for Overture Maps (No Auth needed for Overture)
+                stmt.execute("SET s3_region='us-west-2';");
                 
-                // Event-driven messaging (WebSockets, Redis)
-                installAndLoad(stmt, "radio");
-                
-                // Data gathering
-                installAndLoad(stmt, "crawler");
-                
-                // Additional protocols
-                installAndLoad(stmt, "webdavfs"); // WebDAV
-                // installAndLoad(stmt, "sshfs"); // SSH - often requires libssh, might be tricky on Android without static linking
-                
-                // HTTP Request (if distinct from http_client)
-                // installAndLoad(stmt, "http_request"); 
-
-                // Attach extensions to the in-memory database
-                stmt.execute("ATTACH ':memory:' AS mem");
-                stmt.execute("USE mem");
             }
         } catch (ClassNotFoundException | SQLException e) {
             throw new SQLException("Failed to initialize DuckDBService", e);
-        }
-    }
-
-    private void installAndLoad(Statement stmt, String extension) {
-        try {
-            Log.d(TAG, "Attempting to install and load: " + extension);
-            stmt.execute("INSTALL " + extension + ";");
-            stmt.execute("LOAD " + extension + ";");
-            Log.d(TAG, "Successfully loaded: " + extension);
-        } catch (SQLException e) {
-            // Log but don't fail completely, as some extensions might not be available for this platform
-            Log.w(TAG, "Failed to load extension: " + extension + ". It may not be supported on this platform or architecture.", e);
         }
     }
 

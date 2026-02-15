@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="feed_types">
+        <item>ESRI FeatureServer</item>
+        <item>ESRI ImageServer</item>
+        <item>OGC SensorThings API</item>
+        <item>OGC Moving Features (JSON)</item>
+        <item>OGC SOS (Sensor Observation)</item>
+        <item>GTFS Realtime</item>
+        <item>Redis (KV Scan)</item>
+        <item>Redis (Pub/Sub)</item>
+        <item>Kafka Topic</item>
+        <item>GeoJSON URL</item>
+        <item>WebSocket</item>
+    </string-array>
+</resources>

@@ -14,11 +14,13 @@ import com.atak.plugins.mlsnapshots.services.GeoPackageService;
 import com.atak.plugins.mlsnapshots.services.DuckDBService;
 import com.atak.plugins.mlsnapshots.services.DataIngestionService;
 import com.atak.plugins.mlsnapshots.services.EsriDataService;
+import com.atak.plugins.mlsnapshots.services.PlacesDataService;
 import com.atak.plugins.mlsnapshots.servers.OgcApiServer;
 import com.atak.plugins.mlsnapshots.Google3DTilesWidget;
 import com.atak.plugins.mlsnapshots.ModelConversionWidget;
 import com.atak.plugins.mlsnapshots.PmTilesWidget;
 import com.atak.plugins.mlsnapshots.ModelDownloadWidget;
+import com.atak.plugins.mlsnapshots.PlacesDownloadWidget;
 
 import com.atakmap.android.maps.MapView;
 import com.atakmap.android.maps.MapEvent;
@@ -43,12 +45,14 @@ public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotRe
     private OgcApiServer ogcApiServer;
     private DataIngestionService dataIngestionService;
     private EsriDataService esriDataService;
+    private PlacesDataService placesDataService;
     private MapView mapView;
     private StylingWidgetDropDownReceiver stylingWidgetDropDownReceiver;
     private Google3DTilesWidget google3DTilesWidget;
     private ModelConversionWidget modelConversionWidget;
     private PmTilesWidget pmTilesWidget;
     private ModelDownloadWidget modelDownloadWidget;
+    private PlacesDownloadWidget placesDownloadWidget;
 
     public AtakPlugin(final Lifecycle lifecycle) {
         super(lifecycle);
@@ -61,18 +65,21 @@ public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotRe
         this.mapView = view;
 
         try {
-            aiService = new AIService(context, AIService.ModelType.GEMMA_3N); // Initialize with Gemma 3N as requested
+            aiService = new AIService(context, AIService.ModelType.GEMMA_3N);
             mapLibreService = new MapLibreService(view);
             geoPackageService = new GeoPackageService(context, "atak_data.gpkg");
             dataIngestionService = new DataIngestionService(context, geoPackageService);
             duckDBService = new DuckDBService(geoPackageService.getGeoPackagePath());
             esriDataService = new EsriDataService(duckDBService);
+            placesDataService = new PlacesDataService(duckDBService);
             ogcApiServer = new OgcApiServer(8080, duckDBService, geoPackageService);
+            
             stylingWidgetDropDownReceiver = new StylingWidgetDropDownReceiver(view, context, geoPackageService, mapLibreService);
             google3DTilesWidget = new Google3DTilesWidget(view, context, geoPackageService);
             modelConversionWidget = new ModelConversionWidget(view, context);
             pmTilesWidget = new PmTilesWidget(view, context);
             modelDownloadWidget = new ModelDownloadWidget(view, context);
+            placesDownloadWidget = new PlacesDownloadWidget(view, context, placesDataService);
 
             dataIngestionService.start();
             ogcApiServer.start();
@@ -85,7 +92,6 @@ public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotRe
             String layerId = "0";
             String refreshCron = "*/30 * * * * *"; // Every 30 seconds
             esriDataService.addFeatureServerLayer(layerName, serviceUrl, layerId, refreshCron);
-            Log.d(TAG, "Added sample ESRI Feature Server layer. KML will be available at http://localhost:8080/kml/" + layerName);
 
             // Create toolbars
             createToolbar(context, StylingWidgetDropDownReceiver.SHOW_STYLING_WIDGET, "Styling", R.drawable.ic_layers);
@@ -93,12 +99,10 @@ public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotRe
             createToolbar(context, ModelConversionWidget.SHOW_WIDGET, "Convert 3D", R.drawable.ic_menu_3d);
             createToolbar(context, PmTilesWidget.SHOW_WIDGET, "PMTiles", R.drawable.ic_map);
             createToolbar(context, ModelDownloadWidget.SHOW_WIDGET, "AI Models", R.drawable.ic_download);
+            createToolbar(context, PlacesDownloadWidget.SHOW_WIDGET, "Places", R.drawable.ic_place);
 
             Log.d(TAG, "All services initialized and started successfully.");
-            Log.d(TAG, "Place vector files (Shapefile, KML, etc.) in 'atak/files/imports' to begin.");
-
             view.postDelayed(() -> {
-                Log.d(TAG, "Requesting map snapshot...");
                 mapLibreService.takeSnapshot(this);
             }, 5000);
 
@@ -123,15 +127,9 @@ public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotRe
     @Override
     public void onStop(final Context context, final MapView view) {
         Log.d(TAG, "Stopping plugin...");
-        if (aiService != null) {
-            aiService.close();
-        }
-        if (dataIngestionService != null) {
-            dataIngestionService.stop();
-        }
-        if (ogcApiServer != null) {
-            ogcApiServer.stop();
-        }
+        if (aiService != null) aiService.close();
+        if (dataIngestionService != null) dataIngestionService.stop();
+        if (ogcApiServer != null) ogcApiServer.stop();
         if (duckDBService != null) {
             try {
                 duckDBService.close();
@@ -139,21 +137,13 @@ public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotRe
                 Log.e(TAG, "Failed to close DuckDBService", e);
             }
         }
-        if (stylingWidgetDropDownReceiver != null) {
-            stylingWidgetDropDownReceiver.dispose();
-        }
-        if (google3DTilesWidget != null) {
-            google3DTilesWidget.dispose();
-        }
-        if(modelConversionWidget != null) {
-            modelConversionWidget.dispose();
-        }
-        if(pmTilesWidget != null) {
-            pmTilesWidget.dispose();
-        }
-        if(modelDownloadWidget != null) {
-            modelDownloadWidget.dispose();
-        }
+        if (stylingWidgetDropDownReceiver != null) stylingWidgetDropDownReceiver.dispose();
+        if (google3DTilesWidget != null) google3DTilesWidget.dispose();
+        if(modelConversionWidget != null) modelConversionWidget.dispose();
+        if(pmTilesWidget != null) pmTilesWidget.dispose();
+        if(modelDownloadWidget != null) modelDownloadWidget.dispose();
+        if(placesDownloadWidget != null) placesDownloadWidget.dispose();
+        
         mapView.removeMapEventListener(this);
         super.onStop(context, view);
         Log.d(TAG, "Plugin stopped.");
@@ -161,26 +151,7 @@ public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotRe
 
     @Override
     public void onSnapshotReady(Bitmap snapshot) {
-        Log.d(TAG, "Snapshot is ready.");
-        if (snapshot != null) {
-            String prompt = "Give me a summary of the current tactical situation based on available data.";
-            Log.d(TAG, "Sending prompt to AI for analysis: " + prompt);
-
-            aiService.generateContent(prompt, new AIService.ResponseListener() {
-                @Override
-                public void onResponse(String response) {
-                    mapView.post(() -> Log.d(TAG, "AI Analysis Result: " + response));
-                }
-
-                @Override
-                public void onError(String error) {
-                    mapView.post(() -> Log.e(TAG, "AI Error: " + error));
-                }
-            });
-            snapshot.recycle();
-        } else {
-            Log.e(TAG, "Snapshot was null.");
-        }
+        if (snapshot != null) snapshot.recycle();
     }
 
     @Override

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#222222"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Real-Time Data Feeds"
+        android:textSize="20sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Feed Name"
+        android:textColor="#AAAAAA"/>
+    <EditText
+        android:id="@+id/feedNameInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="e.g., Live Trucks"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#666666"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Feed Type"
+        android:textColor="#AAAAAA"
+        android:layout_marginTop="8dp"/>
+    <Spinner
+        android:id="@+id/feedTypeSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#333333"
+        android:entries="@array/feed_types"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Connection String (URL / Topic)"
+        android:textColor="#AAAAAA"
+        android:layout_marginTop="8dp"/>
+    <EditText
+        android:id="@+id/connectionStringInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="e.g., http://.../FeatureServer or kafka:9092/topic"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#666666"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Update Interval (Cron / Seconds)"
+        android:textColor="#AAAAAA"
+        android:layout_marginTop="8dp"/>
+    <EditText
+        android:id="@+id/intervalInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="e.g., */30 * * * * *"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#666666"/>
+
+    <Button
+        android:id="@+id/addFeedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Add Feed"
+        android:backgroundTint="#0099CC"
+        android:layout_marginTop="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Active Feeds"
+        android:textSize="16sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="8dp"/>
+
+    <ListView
+        android:id="@+id/feedListView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#333333"/>
+
+    <Button
+        android:id="@+id/generateKmlButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Generate ATAK Network Link"
+        android:backgroundTint="#4CAF50"
+        android:layout_marginTop="8dp"/>
+
+</LinearLayout>

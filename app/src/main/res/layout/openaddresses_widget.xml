@@ -1,0 +1,59 @@
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@android:color/background_dark">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="OpenAddresses Geocoder"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large" />
+
+    <EditText
+        android:id="@+id/oa_download_url"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter OpenAddresses ZIP URL"
+        android:inputType="textUri" />
+
+    <Button
+        android:id="@+id/oa_download_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Download &amp; Ingest" />
+
+    <TextView
+        android:id="@+id/oa_status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Status: Idle" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginVertical="16dp"
+        android:background="#555" />
+
+    <EditText
+        android:id="@+id/oa_search_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Search Address (e.g., 123 Main St)" />
+
+    <Button
+        android:id="@+id/oa_search_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Search" />
+
+    <ListView
+        android:id="@+id/oa_results_list"
+        android:layout_width="match_parent"
+        android:layout_height="200dp" />
+
+</LinearLayout>
