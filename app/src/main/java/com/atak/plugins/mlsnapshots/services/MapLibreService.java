@@ -13,6 +13,8 @@ import org.maplibre.gl.style.sources.GeoJsonSource;
 import org.maplibre.gl.style.sources.RasterSource;
 import org.maplibre.gl.style.sources.VectorSource;
 import org.maplibre.gl.style.sources.TileSet;
+import org.maplibre.gl.geometry.LatLngBounds;
+
 
 import static org.maplibre.gl.style.layers.PropertyFactory.circleColor;
 import static org.maplibre.gl.style.layers.PropertyFactory.circleRadius;
@@ -88,6 +90,20 @@ public class MapLibreService {
                 circleRadius(3f)
         );
         style.addLayer(circleLayer);
+    }
+
+    public LatLngBounds getMapBounds() {
+        if (map == null) {
+            return null;
+        }
+        return map.getProjection().getVisibleRegion().latLngBounds;
+    }
+
+    public double getMapZoom() {
+        if (map == null) {
+            return 0.0;
+        }
+        return map.getCameraPosition().zoom;
     }
 
     public void takeSnapshot(MapLibreMap.SnapshotReadyCallback callback) {

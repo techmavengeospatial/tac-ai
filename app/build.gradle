@@ -40,6 +40,6 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'org.geotools:gt-shapefile:29.1'
     implementation 'org.geotools:gt-kml:29.1'
+    implementation 'org.tensorflow:tensorflow-lite-task-text:0.4.0'
     // Other dependencies
 }
-

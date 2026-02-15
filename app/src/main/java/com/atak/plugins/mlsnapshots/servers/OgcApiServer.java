@@ -56,7 +56,35 @@ public class OgcApiServer {
         app.get("/geopackage/{table}/{z}/{x}/{y}", this::getGeoPackageTile);
         app.get("/geopackage/features/{table}", this::getGeoPackageFeatures);
         app.get("/geopackage/vectortiles/{table}/{z}/{x}/{y}", this::getGeoPackageVectorTile);
+        app.get("/geopackage/features/{table}/{z}/{x}/{y}", this::getGeoPackageFeatureTile);
     }
+
+    private void getGeoPackageFeatureTile(Context ctx) {
+        String table = ctx.pathParam("table");
+        long z = Long.parseLong(ctx.pathParam("z"));
+        long x = Long.parseLong(ctx.pathParam("x"));
+        long y = Long.parseLong(ctx.pathParam("y"));
+
+        if (geoPackageService == null || !geoPackageService.isGeoPackageOpen()) {
+            ctx.status(503).result("GeoPackage service not available or no GeoPackage is open.");
+            return;
+        }
+
+        try {
+            // Placeholder for the styling parameter
+            String styleJson = ctx.queryParam("style");
+            byte[] tileData = geoPackageService.getFeatureTile(table, z, x, y, styleJson);
+            if (tileData != null) {
+                ctx.contentType("image/png");
+                ctx.result(tileData);
+            } else {
+                ctx.status(404).result("Tile not found or failed to render.");
+            }
+        } catch (Exception e) {
+            ctx.status(500).result("Error rendering feature tile: " + e.getMessage());
+        }
+    }
+
 
     private void getGeoPackageVectorTile(Context ctx) {
         String table = ctx.pathParam("table");

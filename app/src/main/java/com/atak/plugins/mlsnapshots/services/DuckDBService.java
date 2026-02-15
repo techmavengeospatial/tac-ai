@@ -6,6 +6,13 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.maplibre.gl.geometry.LatLngBounds;
 
 public class DuckDBService {
 
@@ -42,6 +49,72 @@ public class DuckDBService {
 
     public Connection getConnection() {
         return conn;
+    }
+
+    public FeatureData getTableData(String tableName, String orderBy, String filter) throws SQLException {
+        StringBuilder query = new StringBuilder("SELECT * FROM ").append(tableName);
+
+        if (filter != null && !filter.trim().isEmpty()) {
+            query.append(" WHERE ").append(filter);
+        }
+
+        if (orderBy != null && !orderBy.trim().isEmpty()) {
+            query.append(" ORDER BY ").append(orderBy);
+        }
+
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(query.toString())) {
+
+            ResultSetMetaData md = rs.getMetaData();
+            int columnCount = md.getColumnCount();
+            List<String> columnNames = new ArrayList<>();
+            for (int i = 1; i <= columnCount; i++) {
+                columnNames.add(md.getColumnName(i));
+            }
+
+            List<Map<String, Object>> rows = new ArrayList<>();
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                for (String columnName : columnNames) {
+                    row.put(columnName, rs.getObject(columnName));
+                }
+                rows.add(row);
+            }
+            return new FeatureData(columnNames, rows);
+        }
+    }
+    
+    public FeatureData getFeaturesByIntersection(String tableName, LatLngBounds bounds) throws SQLException {
+        String filter = String.format("ST_Intersects(geom, ST_MakeEnvelope(%f, %f, %f, %f))",
+                                    bounds.getLonWest(), bounds.getLatSouth(), 
+                                    bounds.getLonEast(), bounds.getLatNorth());
+        return getTableData(tableName, null, filter);
+    }
+    
+    public FeatureData getNearestNeighbors(String tableName, double lat, double lon, int k) throws SQLException {
+        String query = String.format("SELECT * FROM %s ORDER BY ST_Distance(geom, ST_Point(%f, %f)) LIMIT %d",
+                                    tableName, lon, lat, k);
+        
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(query.toString())) {
+
+            ResultSetMetaData md = rs.getMetaData();
+            int columnCount = md.getColumnCount();
+            List<String> columnNames = new ArrayList<>();
+            for (int i = 1; i <= columnCount; i++) {
+                columnNames.add(md.getColumnName(i));
+            }
+
+            List<Map<String, Object>> rows = new ArrayList<>();
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                for (String columnName : columnNames) {
+                    row.put(columnName, rs.getObject(columnName));
+                }
+                rows.add(row);
+            }
+            return new FeatureData(columnNames, rows);
+        }
     }
 
     public void close() throws SQLException {

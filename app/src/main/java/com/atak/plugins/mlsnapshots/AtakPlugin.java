@@ -1,6 +1,9 @@
 
 package com.atak.plugins.mlsnapshots;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import androidx.annotation.NonNull;
 import com.atak.plugins.mlsnapshots.services.AIService;
 import com.atak.plugins.mlsnapshots.services.MapLibreService;
 import com.atak.plugins.mlsnapshots.services.GeoPackageService;
@@ -10,13 +13,14 @@ import com.atak.plugins.mlsnapshots.servers.OgcApiServer;
 
 import com.atakmap.android.maps.MapView;
 import com.atakmap.coremap.log.Log;
+import org.maplibre.gl.maps.MapLibreMap;
 import transapps.maps.plugin.lifecycle.Lifecycle;
 import gov.tak.api.plugin.AbstractPlugin;
-import android.content.Context;
+
 import java.sql.SQLException;
 import java.util.List;
 
-public class AtakPlugin extends AbstractPlugin {
+public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotReadyCallback {
 
     public final static String TAG = "AtakPlugin";
 
@@ -26,6 +30,7 @@ public class AtakPlugin extends AbstractPlugin {
     private DuckDBService duckDBService;
     private OgcApiServer ogcApiServer;
     private DataIngestionService dataIngestionService;
+    private MapView mapView;
 
     public AtakPlugin(final Lifecycle lifecycle) {
         super(lifecycle);
@@ -35,10 +40,11 @@ public class AtakPlugin extends AbstractPlugin {
     public void onStart(final Context context, final MapView view) {
         Log.d(TAG, "Starting plugin...");
         super.onStart(context, view);
+        this.mapView = view;
 
         try {
             // Initialize services
-            aiService = new AIService("your-google-cloud-project-id", "us-central1", "gemini-1.0-pro-vision-001");
+            aiService = new AIService(context);
             mapLibreService = new MapLibreService(view);
             geoPackageService = new GeoPackageService(context);
 
@@ -95,6 +101,12 @@ public class AtakPlugin extends AbstractPlugin {
                 Log.e(TAG, "Failed to open GeoPackage at: " + geoPackagePath + ". Make sure the file exists and the app has storage permissions.");
             }
 
+            // Take a snapshot after a delay to allow the map to render
+            view.postDelayed(() -> {
+                Log.d(TAG, "Requesting map snapshot...");
+                mapLibreService.takeSnapshot(this);
+            }, 5000); // 5-second delay
+
             Log.d(TAG, "Services initialized successfully.");
 
         } catch (Exception e) {
@@ -105,6 +117,9 @@ public class AtakPlugin extends AbstractPlugin {
     @Override
     public void onStop(final Context context, final MapView view) {
         Log.d(TAG, "Stopping plugin...");
+        if (aiService != null) {
+            aiService.close();
+        }
         if (geoPackageService != null) {
             geoPackageService.close();
         }
@@ -127,5 +142,38 @@ public class AtakPlugin extends AbstractPlugin {
         }
         super.onStop(context, view);
         Log.d(TAG, "Plugin stopped.");
+    }
+
+    @Override
+    public void onSnapshotReady(@NonNull Bitmap snapshot) {
+        Log.d(TAG, "Snapshot is ready.");
+        if (snapshot != null) {
+            // The new on-device AI service is text-only. The snapshot is not used.
+            // This is an example of how to use the new asynchronous text generation.
+            String prompt = "Give me a summary of the current tactical situation based on available data.";
+            Log.d(TAG, "Sending prompt to AI for analysis: " + prompt);
+
+            aiService.generateContent(prompt, new AIService.ResponseListener() {
+                @Override
+                public void onResponse(String response) {
+                    mapView.post(() -> {
+                        Log.d(TAG, "AI Analysis Result: " + response);
+                        // Here you would typically display the result in a UI element
+                    });
+                }
+
+                @Override
+                public void onError(String error) {
+                    mapView.post(() -> {
+                        Log.e(TAG, "AI Error: " + error);
+                    });
+                }
+            });
+
+            // Recycle the bitmap to free up memory since it is not used by the AI service
+            snapshot.recycle();
+        } else {
+            Log.e(TAG, "Snapshot was null.");
+        }
     }
 }
