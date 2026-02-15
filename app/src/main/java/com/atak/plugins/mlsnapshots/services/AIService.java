@@ -3,132 +3,85 @@ package com.atak.plugins.mlsnapshots.services;
 
 import android.content.Context;
 import com.google.mediapipe.tasks.genai.llminference.LlmInference;
-import com.google.mediapipe.tasks.genai.llminference.LlmInference.LlmInferenceOptions;
+import com.google.mediapipe.tasks.genai.llminference.LlmInferenceOptions;
 import com.atakmap.coremap.log.Log;
+import java.io.File;
 
 public class AIService {
 
     public final static String TAG = "AIService";
 
-    public enum ModelType {
-        GEMMA_2B("gemma-2b-it-cpu-int4.tflite"),
-        GEMMA_3N("gemma-3n-it-cpu-int4.tflite"),
-        PHI_4("phi-4-cpu-int4.tflite");
-
-        private final String filename;
-
-        ModelType(String filename) {
-            this.filename = filename;
-        }
-
-        public String getFilename() {
-            return filename;
-        }
-    }
-
     private LlmInference llmInference;
     private final Context context;
-    private ModelType currentModelType;
 
-    // Define a callback interface for handling the response
     public interface ResponseListener {
         void onResponse(String response);
+        void onPartialResponse(String partialText);
         void onError(String error);
     }
 
     public AIService(Context context) {
-        this(context, ModelType.GEMMA_2B); // Default to Gemma 2B
-    }
-
-    public AIService(Context context, ModelType modelType) {
         this.context = context;
-        initializeModel(modelType);
-    }
-
-    public void initializeModel(ModelType modelType) {
-        try {
-            if (llmInference != null) {
-                llmInference.close();
-            }
-            
-            this.currentModelType = modelType;
-            Log.d(TAG, "Initializing AI Service with model: " + modelType.name());
-
-            // It is recommended to create a single LlmInference instance for the entire app.
-            // The LlmInference is thread-safe.
-            LlmInferenceOptions options = LlmInferenceOptions.builder()
-                .setModelPath(modelType.getFilename())
-                .setMaxTokens(512) // Limit output tokens
-                .setResultListener((partialResult, done) -> {
-                    // This listener is for streaming results, not used in the simple generateContent method
-                })
-                .setErrorListener((error) -> {
-                    Log.e(TAG, "LlmInference Error: " + error.getMessage());
-                })
-                .build();
-            
-            llmInference = LlmInference.createFromOptions(context, options);
-            Log.d(TAG, "Model initialized successfully.");
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error initializing LlmInference with model " + modelType.name(), e);
-        }
     }
 
     /**
-     * Generates content asynchronously. The result is returned through the listener.
-     *
-     * @param prompt The input prompt for the model.
-     * @param listener The listener to handle the response or error.
+     * Initializes the LLM inference engine with a specific model file.
+     * This supports any MediaPipe-compatible .bin or .tflite model.
+     * 
+     * @param modelPath The absolute path to the model file on the device.
      */
-    public void generateContent(String prompt, ResponseListener listener) {
-        if (llmInference == null) {
-            listener.onError("LlmInference is not initialized.");
+    public void initializeModel(String modelPath) {
+        if (!new File(modelPath).exists()) {
+            Log.e(TAG, "Model file not found at: " + modelPath);
             return;
         }
 
         try {
-            // The generateResponseAsync method is non-blocking and will return the result
-            // in the provided callback.
-            llmInference.generateResponseAsync(prompt);
-            
-            // Note: The simple generateResponseAsync in some versions of the MediaPipe tasks 
-            // might not take a callback directly if a result listener was set in options.
-            // However, based on common usage, let's assume a standard async call or 
-            // adjust if the specific library version requires a different pattern.
-            // For this implementation, we'll assume the simpler overload exists or 
-            // wrap the sync call in a thread if needed. 
-            
-            // To be safe and compatible with the callback pattern we exposed:
-            new Thread(() -> {
-                try {
-                    String result = llmInference.generateResponse(prompt);
-                    if (result != null) {
-                        listener.onResponse(result);
-                    } else {
-                        listener.onError("Failed to generate response.");
-                    }
-                } catch (Exception e) {
-                    listener.onError("Error during generation: " + e.getMessage());
-                }
-            }).start();
+            Log.d(TAG, "Initializing AI Service with model: " + modelPath);
+
+            LlmInferenceOptions options = LlmInferenceOptions.builder()
+                .setModelPath(modelPath)
+                .setMaxTokens(1024) // Increased context window
+                .setTopK(40)
+                .setTemperature(0.8f) // Slightly creative
+                .setRandomSeed(42)
+                .build();
+
+            llmInference = LlmInference.createFromOptions(context, options);
+            Log.d(TAG, "Model initialized successfully.");
 
         } catch (Exception e) {
-            listener.onError("Failed to start generation: " + e.getMessage());
+            Log.e(TAG, "Error initializing LlmInference with model " + modelPath, e);
         }
     }
 
-    public ModelType getCurrentModelType() {
-        return currentModelType;
+    public void generateContent(String prompt, ResponseListener listener) {
+        if (llmInference == null) {
+            listener.onError("LlmInference is not initialized. Please call initializeModel() first.");
+            return;
+        }
+
+        // Use a background thread for generation to avoid blocking the UI
+        new Thread(() -> {
+            try {
+                // For streaming response (better UX)
+                llmInference.generateResponseAsync(prompt, (partialResult, done) -> {
+                    if (partialResult != null) {
+                        listener.onPartialResponse(partialResult);
+                    }
+                    if (done) {
+                        listener.onResponse(" [DONE]"); 
+                    }
+                });
+            } catch (Exception e) {
+                listener.onError("Error during generation: " + e.getMessage());
+            }
+        }).start();
     }
 
-    /**
-     * Releases the resources used by the LlmInference model.
-     * Call this when the service is being destroyed.
-     */
     public void close() {
-        if (llmInference != null) {
-            llmInference.close();
-        }
+        // LlmInference currently doesn't have a public close() method in some versions,
+        // but if it becomes available or for other cleanup:
+        llmInference = null;
     }
 }
