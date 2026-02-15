@@ -1,0 +1,5 @@
+[
+    { "id": 1, "lat": 34.0522, "lon": -118.2437, "timestamp": "2023-10-27T10:00:00Z", "name": "Vehicle 1" },
+    { "id": 2, "lat": 34.0525, "lon": -118.2440, "timestamp": "2023-10-27T10:00:05Z", "name": "Vehicle 2" },
+    { "id": 3, "lat": 34.0528, "lon": -118.2443, "timestamp": "2023-10-27T10:00:10Z", "name": "Vehicle 3" }
+]
