@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<customMapSource>
+    <name>GeoPackage Features - {TABLE_NAME}</name>
+    <minZoom>0</minZoom>
+    <maxZoom>20</maxZoom>
+    <tileType>PNG</tileType>
+    <tileUpdate>None</tileUpdate>
+    <url>http://localhost:8080/geopackage/features/{TABLE_NAME}/{z}/{x}/{y}?style={STYLE_JSON}</url>
+    <backgroundColor>#00000000</backgroundColor>
+</customMapSource>

@@ -1,32 +1,77 @@
 
 package com.atak.plugins.mlsnapshots.services;
 
-import com.atak.plugins.mlsnapshots.services.DuckDBService;
-import java.sql.SQLException;
-import java.sql.Statement;
+import android.content.Context;
+import com.atak.coremap.log.Log;
+import org.geotools.data.DataStore;
+import org.geotools.data.DataStoreFinder;
+import org.geotools.data.simple.SimpleFeatureSource;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class DataIngestionService {
 
-    private final DuckDBService duckDBService;
+    public static final String TAG = "DataIngestionService";
+    private final File importDir;
+    private final GeoPackageService geoPackageService;
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
-    public DataIngestionService(DuckDBService duckDBService) {
-        this.duckDBService = duckDBService;
+    public DataIngestionService(Context context, GeoPackageService geoPackageService) {
+        this.importDir = new File(context.getExternalFilesDir(null), "imports");
+        if (!importDir.exists() && !importDir.mkdirs()) {
+            Log.e(TAG, "Failed to create import directory");
+        }
+        this.geoPackageService = geoPackageService;
     }
 
-    public void start() throws SQLException {
-        try (Statement stmt = duckDBService.getConnection().createStatement()) {
-            // Create a table to store the events
-            stmt.execute("CREATE TABLE IF NOT EXISTS events (id INTEGER, lat DOUBLE, lon DOUBLE, timestamp VARCHAR, name VARCHAR, geom GEOMETRY);");
+    public void start() {
+        scheduler.scheduleAtFixedRate(this::pollImportDirectory, 0, 10, TimeUnit.SECONDS);
+        Log.d(TAG, "Started watching for files in " + importDir.getAbsolutePath());
+    }
 
-            // Use cron to periodically fetch data
-            // This is a simplified example. In a real-world scenario, you would fetch from a live endpoint.
-            stmt.execute("CREATE CRON JOB 'ingest_data' AS \"INSERT INTO events SELECT id, lat, lon, timestamp, name, ST_Point(lon, lat) FROM read_json_auto('app/src/main/resources/static/events.json')\"");
+    private void pollImportDirectory() {
+        File[] files = importDir.listFiles();
+        if (files == null) return;
+
+        for (File file : files) {
+            try {
+                if (file.isFile()) {
+                    importFile(file);
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Error importing file: " + file.getName(), e);
+            }
         }
     }
 
-    public void stop() throws SQLException {
-        try (Statement stmt = duckDBService.getConnection().createStatement()) {
-            stmt.execute("DROP CRON JOB IF EXISTS ingest_data;");
+    private void importFile(File file) throws IOException {
+        Map<String, Object> params = new HashMap<>();
+        params.put("url", file.toURI().toURL());
+
+        DataStore dataStore = DataStoreFinder.getDataStore(params);
+        if (dataStore == null) {
+            Log.w(TAG, "No DataStore found that can handle: " + file.getName());
+            return;
         }
+
+        String[] typeNames = dataStore.getTypeNames();
+        for (String typeName : typeNames) {
+            SimpleFeatureSource featureSource = dataStore.getFeatureSource(typeName);
+            if (featureSource != null) {
+                geoPackageService.createOrUpdateGeoPackage(typeName, featureSource);
+            }
+        }
+        
+        // Optionally, delete the file after successful import
+        // file.delete();
+    }
+
+    public void stop() {
+        scheduler.shutdown();
     }
 }

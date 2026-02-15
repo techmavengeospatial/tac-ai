@@ -1,0 +1,9 @@
+
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+    <ImageButton
+        android:id="@+id/google_3d_tiles_widget_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_3d_rotation" />
+</merge>
