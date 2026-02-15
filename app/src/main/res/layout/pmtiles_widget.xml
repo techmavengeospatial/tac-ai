@@ -1,0 +1,36 @@
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@android:color/background_dark">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="PMTiles Server"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large" />
+
+    <Button
+        android:id="@+id/select_pmtiles_button"
+        android:layout_width="wrap_content"
+        android.layout_height="wrap_content"
+        android:text="Select PMTiles File" />
+
+    <TextView
+        android:id="@+id/pmtiles_status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Status: Idle" />
+
+    <Button
+        android:id="@+id/start_pmtiles_server_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Start Server"
+        android:enabled="false" />
+
+</LinearLayout>

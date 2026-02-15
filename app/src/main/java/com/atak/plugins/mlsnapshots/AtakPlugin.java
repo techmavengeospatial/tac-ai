@@ -16,6 +16,8 @@ import com.atak.plugins.mlsnapshots.services.DuckDBService;
 import com.atak.plugins.mlsnapshots.services.DataIngestionService;
 import com.atak.plugins.mlsnapshots.servers.OgcApiServer;
 import com.atak.plugins.mlsnapshots.Google3DTilesWidget;
+import com.atak.plugins.mlsnapshots.ModelConversionWidget;
+import com.atak.plugins.mlsnapshots.PmTilesWidget;
 
 import com.atakmap.android.maps.MapView;
 import com.atakmap.android.maps.MapEvent;
@@ -42,6 +44,8 @@ public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotRe
     private MapView mapView;
     private StylingWidgetDropDownReceiver stylingWidgetDropDownReceiver;
     private Google3DTilesWidget google3DTilesWidget;
+    private ModelConversionWidget modelConversionWidget;
+    private PmTilesWidget pmTilesWidget;
 
     public AtakPlugin(final Lifecycle lifecycle) {
         super(lifecycle);
@@ -62,6 +66,8 @@ public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotRe
             ogcApiServer = new OgcApiServer(8080, duckDBService, geoPackageService);
             stylingWidgetDropDownReceiver = new StylingWidgetDropDownReceiver(view, context, geoPackageService, mapLibreService);
             google3DTilesWidget = new Google3DTilesWidget(view, context, geoPackageService);
+            modelConversionWidget = new ModelConversionWidget(view, context);
+            pmTilesWidget = new PmTilesWidget(view, context);
 
             dataIngestionService.start();
             ogcApiServer.start();
@@ -85,6 +91,24 @@ public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotRe
 
             Tool google3dTool = new Tool.Builder().setName("Google 3D").setIcon(R.drawable.ic_3d_rotation).setWidget(google3dToolbar).build();
             ToolManager.getInstance().addTool(google3dTool);
+            
+            View modelConversionToolbar = View.inflate(context, R.layout.model_conversion_toolbar, null);
+            modelConversionToolbar.findViewById(R.id.model_conversion_widget_button).setOnClickListener(v -> {
+                Intent intent = new Intent(ModelConversionWidget.SHOW_WIDGET);
+                context.sendBroadcast(intent);
+            });
+
+            Tool modelConversionTool = new Tool.Builder().setName("Convert 3D").setIcon(R.drawable.ic_menu_3d).setWidget(modelConversionToolbar).build();
+            ToolManager.getInstance().addTool(modelConversionTool);
+            
+            View pmTilesToolbar = View.inflate(context, R.layout.pmtiles_toolbar, null);
+            pmTilesToolbar.findViewById(R.id.pmtiles_widget_button).setOnClickListener(v -> {
+                Intent intent = new Intent(PmTilesWidget.SHOW_WIDGET);
+                context.sendBroadcast(intent);
+            });
+
+            Tool pmTilesTool = new Tool.Builder().setName("PMTiles").setIcon(R.drawable.ic_map).setWidget(pmTilesToolbar).build();
+            ToolManager.getInstance().addTool(pmTilesTool);
 
             Log.d(TAG, "All services initialized and started successfully.");
             Log.d(TAG, "Place vector files (Shapefile, KML, etc.) in 'atak/files/imports' to begin.");
@@ -123,6 +147,12 @@ public class AtakPlugin extends AbstractPlugin implements MapLibreMap.SnapshotRe
         }
         if (google3DTilesWidget != null) {
             google3DTilesWidget.dispose();
+        }
+        if(modelConversionWidget != null) {
+            modelConversionWidget.dispose();
+        }
+        if(pmTilesWidget != null) {
+            pmTilesWidget.dispose();
         }
         mapView.removeMapEventListener(this);
         super.onStop(context, view);

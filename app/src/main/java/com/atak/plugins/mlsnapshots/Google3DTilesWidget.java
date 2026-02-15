@@ -14,6 +14,10 @@ import com.atakmap.android.maps.MapView;
 import com.atakmap.android.dropdown.DropDownReceiver;
 import com.atakmap.android.dropdown.DropDown.OnStateListener;
 import com.atak.coremap.log.Log;
+import com.atakmap.map.layer.feature.geometry.Envelope;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Polygon;
 
 public class Google3DTilesWidget extends DropDownReceiver implements OnStateListener, View.OnClickListener {
 
@@ -25,18 +29,19 @@ public class Google3DTilesWidget extends DropDownReceiver implements OnStateList
     private final Google3DTilesService tilesService;
     private EditText apiKeyInput;
     private TextView statusText;
+    private Button startButton;
 
     public Google3DTilesWidget(final MapView mapView, final Context context, GeoPackageService geoPackageService) {
         super(mapView);
         this.pluginContext = context;
         this.tilesService = new Google3DTilesService(geoPackageService);
-        
+
         LayoutInflater inflater = LayoutInflater.from(pluginContext);
         widgetView = inflater.inflate(R.layout.google_3d_tiles_widget, null);
 
         apiKeyInput = widgetView.findViewById(R.id.google_api_key_input);
         statusText = widgetView.findViewById(R.id.import_status_text);
-        Button startButton = widgetView.findViewById(R.id.start_import_button);
+        startButton = widgetView.findViewById(R.id.start_import_button);
         startButton.setOnClickListener(this);
     }
 
@@ -66,16 +71,30 @@ public class Google3DTilesWidget extends DropDownReceiver implements OnStateList
                 statusText.setText("Status: Please enter an API key.");
                 return;
             }
-            
-            tilesService.startImport(apiKey, new Google3DTilesService.ProgressListener() {
+
+            startButton.setEnabled(false);
+            statusText.setText("Status: Starting import...");
+
+            // Use the current map view as the AOI
+            Envelope bounds = getMapView().getBounds();
+            if (bounds == null) {
+                statusText.setText("Status: Could not get map bounds.");
+                startButton.setEnabled(true);
+                return;
+            }
+
+            tilesService.startImport(apiKey, bounds, new Google3DTilesService.ProgressListener() {
                 @Override
                 public void onProgress(String message) {
                     getMapView().post(() -> statusText.setText("Status: " + message));
                 }
 
                 @Override
-                public void onComplete(boolean success) {
-                    getMapView().post(() -> statusText.setText("Status: Import " + (success ? "complete." : "failed.")));
+                public void onComplete(boolean success, String finalMessage) {
+                    getMapView().post(() -> {
+                        statusText.setText("Status: " + finalMessage);
+                        startButton.setEnabled(true);
+                    });
                 }
             });
         }

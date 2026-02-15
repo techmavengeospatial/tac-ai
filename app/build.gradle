@@ -41,5 +41,10 @@ dependencies {
     implementation 'org.geotools:gt-shapefile:29.1'
     implementation 'org.geotools:gt-kml:29.1'
     implementation 'org.tensorflow:tensorflow-lite-task-text:0.4.0'
+    // jgltf for 3d model handling
+    implementation 'de.javagl:jgltf-model:2.0.3'
+    implementation 'de.javagl:jgltf-impl-v2-jsc:2.0.3'
+    implementation 'de.javagl:jgltf-obj:2.0.3'
+
     // Other dependencies
 }
