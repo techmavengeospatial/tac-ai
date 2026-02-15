@@ -1,0 +1,45 @@
+
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    compileSdkVersion 33
+    defaultConfig {
+        applicationId "com.atak.plugins.mlsnapshots"
+        minSdkVersion 21
+        targetSdkVersion 33
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    packagingOptions {
+        resources.excludes.add("META-INF/DEPENDENCIES")
+        resources.excludes.add("META-INF/LICENSE")
+        resources.excludes.add("META-INF/NOTICE")
+        resources.excludes.add("META-INF/services/javax.media.jai.JAI")
+        resources.excludes.add("xsd/kml/2.2.0/atom-author-link.xsd")
+        resources.excludes.add("xsd/kml/2.2.0/ogckml22.xsd")
+        resources.excludes.add("xsd/kml/2.2.0/xAL.xsd")
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url "https://repo.osgeo.org/repository/release/" }
+}
+
+dependencies {
+    implementation 'org.duckdb:duckdb_jdbc:0.9.2'
+    implementation 'io.javalin:javalin:5.6.1'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'org.geotools:gt-shapefile:29.1'
+    implementation 'org.geotools:gt-kml:29.1'
+    // Other dependencies
+}
+

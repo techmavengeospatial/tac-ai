@@ -4,11 +4,15 @@ package com.atak.plugins.mlsnapshots;
 import com.atak.plugins.mlsnapshots.services.AIService;
 import com.atak.plugins.mlsnapshots.services.MapLibreService;
 import com.atak.plugins.mlsnapshots.services.GeoPackageService;
+import com.atak.plugins.mlsnapshots.services.DuckDBService;
+import com.atak.plugins.mlsnapshots.servers.OgcApiServer;
+
 import com.atakmap.android.maps.MapView;
 import com.atakmap.coremap.log.Log;
 import transapps.maps.plugin.lifecycle.Lifecycle;
 import gov.tak.api.plugin.AbstractPlugin;
 import android.content.Context;
+import java.sql.SQLException;
 
 public class AtakPlugin extends AbstractPlugin {
 
@@ -17,6 +21,8 @@ public class AtakPlugin extends AbstractPlugin {
     private AIService aiService;
     private MapLibreService mapLibreService;
     private GeoPackageService geoPackageService;
+    private DuckDBService duckDBService;
+    private OgcApiServer ogcApiServer;
 
     public AtakPlugin(final Lifecycle lifecycle) {
         super(lifecycle);
@@ -33,15 +39,15 @@ public class AtakPlugin extends AbstractPlugin {
             mapLibreService = new MapLibreService(view);
             geoPackageService = new GeoPackageService(context);
 
-            // Example of how to use the GeoPackageService
-            // String geoPackagePath = "/sdcard/data/basemap.gpkg";
-            // if (geoPackageService.openGeoPackage(geoPackagePath)) {
-            //     Log.d(TAG, "GeoPackage opened successfully");
-            //     List<String> vectorTileTables = geoPackageService.getVectorTileTables();
-            //     Log.d(TAG, "Vector Tile Tables: " + vectorTileTables);
-            // } else {
-            //     Log.e(TAG, "Failed to open GeoPackage");
-            // }
+            // Initialize DuckDB and OGC API Server
+            try {
+                // Using an in-memory database
+                duckDBService = new DuckDBService(":memory:");
+                ogcApiServer = new OgcApiServer(8080, duckDBService);
+                Log.d(TAG, "DuckDB and OGC API Server initialized.");
+            } catch (SQLException e) {
+                Log.e(TAG, "Failed to initialize DuckDBService", e);
+            }
 
             Log.d(TAG, "Services initialized successfully.");
 
@@ -55,6 +61,16 @@ public class AtakPlugin extends AbstractPlugin {
         Log.d(TAG, "Stopping plugin...");
         if (geoPackageService != null) {
             geoPackageService.close();
+        }
+        if (ogcApiServer != null) {
+            ogcApiServer.stop();
+        }
+        if (duckDBService != null) {
+            try {
+                duckDBService.close();
+            } catch (SQLException e) {
+                Log.e(TAG, "Failed to close DuckDBService", e);
+            }
         }
         super.onStop(context, view);
         Log.d(TAG, "Plugin stopped.");
